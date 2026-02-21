@@ -1,0 +1,110 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 4%;
+    --foreground: 45 20% 90%;
+
+    --card: 220 18% 8%;
+    --card-foreground: 45 20% 90%;
+
+    --popover: 220 18% 8%;
+    --popover-foreground: 45 20% 90%;
+
+    --primary: 40 85% 55%;
+    --primary-foreground: 220 20% 4%;
+
+    --secondary: 220 15% 14%;
+    --secondary-foreground: 45 15% 80%;
+
+    --muted: 220 12% 12%;
+    --muted-foreground: 220 10% 50%;
+
+    --accent: 185 70% 45%;
+    --accent-foreground: 220 20% 4%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 15% 16%;
+    --input: 220 15% 16%;
+    --ring: 40 85% 55%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 220 18% 6%;
+    --sidebar-foreground: 45 15% 80%;
+    --sidebar-primary: 40 85% 55%;
+    --sidebar-primary-foreground: 220 20% 4%;
+    --sidebar-accent: 220 15% 12%;
+    --sidebar-accent-foreground: 45 15% 80%;
+    --sidebar-border: 220 15% 16%;
+    --sidebar-ring: 40 85% 55%;
+
+    --kalki-gold: 40 85% 55%;
+    --kalki-gold-light: 42 90% 70%;
+    --kalki-gold-dark: 38 80% 40%;
+    --kalki-cyan: 185 70% 45%;
+    --kalki-cyan-glow: 185 80% 55%;
+    --kalki-ember: 15 85% 50%;
+    --kalki-dark: 220 20% 4%;
+    --kalki-dark-card: 220 18% 8%;
+    --kalki-dark-elevated: 220 15% 12%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .glow-gold {
+    text-shadow: 0 0 20px hsl(40 85% 55% / 0.6), 0 0 40px hsl(40 85% 55% / 0.3);
+  }
+
+  .glow-cyan {
+    text-shadow: 0 0 20px hsl(185 70% 45% / 0.6), 0 0 40px hsl(185 70% 45% / 0.3);
+  }
+
+  .glow-box-gold {
+    box-shadow: 0 0 20px hsl(40 85% 55% / 0.2), 0 0 40px hsl(40 85% 55% / 0.1);
+  }
+
+  .glow-box-cyan {
+    box-shadow: 0 0 20px hsl(185 70% 45% / 0.2), 0 0 40px hsl(185 70% 45% / 0.1);
+  }
+
+  .gradient-gold {
+    background: linear-gradient(135deg, hsl(40 85% 55%), hsl(42 90% 70%));
+  }
+
+  .gradient-dark {
+    background: linear-gradient(180deg, hsl(220 20% 4%), hsl(220 18% 8%));
+  }
+
+  .border-glow-gold {
+    border: 1px solid hsl(40 85% 55% / 0.3);
+    box-shadow: inset 0 0 20px hsl(40 85% 55% / 0.05);
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, hsl(40 85% 55%), hsl(42 90% 70%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
