@@ -15,15 +15,8 @@ type ProblemStatement = {
   max_teams: number;
 };
 
-type Team = {
-  id: string;
-  name: string;
-};
-
-type TeamMember = {
-  user_id: string;
-  profiles?: { full_name: string; email: string } | null;
-};
+type Team = { id: string; name: string };
+type TeamMember = { id: string; member_name: string; member_email: string };
 
 const ParticipantDashboard = () => {
   const { user } = useAuth();
@@ -41,7 +34,7 @@ const ParticipantDashboard = () => {
   }, [user]);
 
   const fetchData = async () => {
-    // Fetch team membership
+    // Find team via team_members (user_id match)
     const { data: membership } = await supabase
       .from("team_members")
       .select("team_id")
@@ -49,31 +42,15 @@ const ParticipantDashboard = () => {
       .maybeSingle();
 
     if (membership) {
-      const { data: teamData } = await supabase
-        .from("teams")
-        .select("*")
-        .eq("id", membership.team_id)
-        .single();
+      const { data: teamData } = await supabase.from("teams").select("id, name").eq("id", membership.team_id).single();
       setTeam(teamData);
 
+      // Get all members of this team
       const { data: members } = await supabase
         .from("team_members")
-        .select("user_id")
+        .select("id, member_name, member_email")
         .eq("team_id", membership.team_id);
-
-      if (members) {
-        const memberProfiles = await Promise.all(
-          members.map(async (m) => {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("full_name, email")
-              .eq("user_id", m.user_id)
-              .single();
-            return { user_id: m.user_id, profiles: profile };
-          })
-        );
-        setTeamMembers(memberProfiles);
-      }
+      setTeamMembers((members || []) as TeamMember[]);
 
       const { data: selection } = await supabase
         .from("team_selections")
@@ -83,48 +60,39 @@ const ParticipantDashboard = () => {
       if (selection) setSelectedProblem(selection.problem_statement_id);
     }
 
-    // Fetch problem statements
-    const { data: problemData } = await supabase
-      .from("problem_statements")
-      .select("*")
-      .order("created_at");
+    const { data: problemData } = await supabase.from("problem_statements").select("*").order("created_at");
     setProblems(problemData || []);
 
-    // Fetch selection counts per problem
     const { data: allSelections } = await supabase.from("team_selections").select("problem_statement_id");
     const counts: Record<string, number> = {};
     (allSelections || []).forEach((s) => {
       counts[s.problem_statement_id] = (counts[s.problem_statement_id] || 0) + 1;
     });
     setSelectionCounts(counts);
-
     setLoading(false);
   };
 
   const selectProblem = async (problemId: string) => {
     if (!team) {
-      toast({ title: "No Team", description: "You are not assigned to a team yet.", variant: "destructive" });
+      toast({ title: "No Team", description: "You are not assigned to a team.", variant: "destructive" });
       return;
     }
-
     const problem = problems.find((p) => p.id === problemId);
     const currentCount = selectionCounts[problemId] || 0;
     if (problem && problem.max_teams > 0 && currentCount >= problem.max_teams && selectedProblem !== problemId) {
-      toast({ title: "No Slots", description: "This problem statement has no available slots.", variant: "destructive" });
+      toast({ title: "No Slots", description: "This mission has no available slots.", variant: "destructive" });
       return;
     }
-
     const { error } = await supabase
       .from("team_selections")
       .upsert({ team_id: team.id, problem_statement_id: problemId }, { onConflict: "team_id" });
-
     if (error) {
       toast({ title: "Selection failed", description: error.message, variant: "destructive" });
     } else {
       setSelectedProblem(problemId);
       setConfirmProblem(null);
-      toast({ title: "Problem Selected!", description: "Your team's choice has been recorded." });
-      fetchData(); // refresh counts
+      toast({ title: "Mission Selected!" });
+      fetchData();
     }
   };
 
@@ -143,10 +111,9 @@ const ParticipantDashboard = () => {
       <div className="space-y-8">
         <div>
           <h1 className="font-display text-3xl font-bold text-gradient-gold glow-gold">WARRIOR DASHBOARD</h1>
-          <p className="text-muted-foreground mt-1">Welcome back, {user?.email}</p>
+          <p className="text-muted-foreground mt-1">Welcome, {team?.name || user?.email}</p>
         </div>
 
-        {/* Team Info */}
         <Card className="bg-card border-border border-glow-gold">
           <CardHeader>
             <CardTitle className="font-display text-xl text-kalki-cyan">
@@ -159,8 +126,8 @@ const ParticipantDashboard = () => {
                 <p className="text-muted-foreground">Team Members:</p>
                 <div className="flex flex-wrap gap-2">
                   {teamMembers.map((m) => (
-                    <Badge key={m.user_id} className="bg-secondary text-secondary-foreground font-body text-sm">
-                      {m.profiles?.full_name || m.profiles?.email || "Unknown"}
+                    <Badge key={m.id} className="bg-secondary text-secondary-foreground font-body text-sm">
+                      {m.member_name || m.member_email || "Unknown"}
                     </Badge>
                   ))}
                 </div>
@@ -171,11 +138,10 @@ const ParticipantDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Problem Statements */}
         <div>
           <h2 className="font-display text-2xl font-bold text-foreground mb-4">CHOOSE YOUR MISSION</h2>
           {problems.length === 0 ? (
-            <p className="text-muted-foreground">No problem statements available yet. Stay tuned!</p>
+            <p className="text-muted-foreground">No missions available yet.</p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {problems.map((p) => {
@@ -200,7 +166,7 @@ const ParticipantDashboard = () => {
                         <div className="flex items-center gap-2 shrink-0">
                           {slotsLeft !== null && (
                             <Badge variant="outline" className={`font-body text-xs ${slotsLeft <= 0 ? "border-destructive text-destructive" : "border-kalki-cyan text-kalki-cyan"}`}>
-                              {slotsLeft <= 0 ? "FULL" : `${slotsLeft} slot${slotsLeft !== 1 ? "s" : ""} left`}
+                              {slotsLeft <= 0 ? "FULL" : `${slotsLeft} slot${slotsLeft !== 1 ? "s" : ""}`}
                             </Badge>
                           )}
                           {selectedProblem === p.id && (
@@ -212,16 +178,11 @@ const ParticipantDashboard = () => {
                     <CardContent className="space-y-3">
                       <p className="text-muted-foreground">{p.description}</p>
                       {selectedProblem !== p.id && !isFull && (
-                        <Button
-                          onClick={() => setConfirmProblem(p)}
-                          className="font-display tracking-wider bg-primary text-primary-foreground hover:bg-kalki-gold-light w-full"
-                        >
+                        <Button onClick={() => setConfirmProblem(p)} className="font-display tracking-wider bg-primary text-primary-foreground hover:bg-kalki-gold-light w-full">
                           SELECT THIS MISSION
                         </Button>
                       )}
-                      {isFull && (
-                        <p className="text-center text-sm text-destructive font-display">NO SLOTS AVAILABLE</p>
-                      )}
+                      {isFull && <p className="text-center text-sm text-destructive font-display">NO SLOTS AVAILABLE</p>}
                     </CardContent>
                   </Card>
                 );
@@ -231,22 +192,17 @@ const ParticipantDashboard = () => {
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
       <Dialog open={!!confirmProblem} onOpenChange={(open) => !open && setConfirmProblem(null)}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display text-gradient-gold">Confirm Selection</DialogTitle>
           </DialogHeader>
           <p className="text-muted-foreground">
-            Are you sure you want to select <span className="text-foreground font-semibold">{confirmProblem?.title}</span> as your team's mission? This will replace any previous selection.
+            Select <span className="text-foreground font-semibold">{confirmProblem?.title}</span> as your mission? This replaces any previous selection.
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setConfirmProblem(null)} className="font-display border-border">
-              CANCEL
-            </Button>
-            <Button onClick={() => confirmProblem && selectProblem(confirmProblem.id)} className="font-display bg-primary text-primary-foreground hover:bg-kalki-gold-light">
-              CONFIRM
-            </Button>
+            <Button variant="outline" onClick={() => setConfirmProblem(null)} className="font-display border-border">CANCEL</Button>
+            <Button onClick={() => confirmProblem && selectProblem(confirmProblem.id)} className="font-display bg-primary text-primary-foreground hover:bg-kalki-gold-light">CONFIRM</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
