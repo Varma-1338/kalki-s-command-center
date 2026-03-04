@@ -5,129 +5,160 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import kalkiPoster from "@/assets/kalki-poster.jpg";
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [loginKey, setLoginKey] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleTeamLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginKey.trim()) return;
+    setLoading(true);
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/team-login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ login_key: loginKey.trim() }),
+        }
+      );
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        toast({ title: "Login failed", description: data.error || "Invalid login key", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      // Set the session in supabase client
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+
+      navigate("/dashboard");
+    } catch (err: any) {
+      toast({ title: "Login failed", description: err.message || "Network error", variant: "destructive" });
+    }
+    setLoading(false);
+  };
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    if (isLogin) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast({ title: "Login failed", description: error.message, variant: "destructive" });
-      } else {
-        navigate("/dashboard");
-      }
+    const { error } = await supabase.auth.signInWithPassword({
+      email: adminEmail,
+      password: adminPassword,
+    });
+
+    if (error) {
+      toast({ title: "Login failed", description: error.message, variant: "destructive" });
     } else {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName },
-          emailRedirectTo: window.location.origin,
-        },
-      });
-      if (error) {
-        toast({ title: "Signup failed", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Check your email", description: "We sent you a verification link." });
-      }
+      navigate("/dashboard");
     }
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4">
-      {/* Full-screen background image */}
-      <img
-        src={kalkiPoster}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover"
-        aria-hidden="true"
-      />
-      {/* Dark overlay with gradient */}
+      <img src={kalkiPoster} alt="" className="absolute inset-0 w-full h-full object-cover" aria-hidden="true" />
       <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/75 to-background/90" />
 
-      {/* Auth Form */}
-      <div className="relative z-10 w-full max-w-md space-y-8 bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-8 shadow-2xl">
+      <div className="relative z-10 w-full max-w-md space-y-6 bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-8 shadow-2xl">
         <div className="text-center">
           <h1 className="font-display text-4xl font-bold text-gradient-gold glow-gold mb-1">DEV-FEST 2.0</h1>
           <p className="font-display text-sm text-kalki-cyan tracking-[0.3em] mb-6">HACKATHON 2898 AD</p>
-          <h2 className="font-display text-2xl font-bold text-foreground">
-            {isLogin ? "ENTER THE ARENA" : "JOIN THE QUEST"}
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            {isLogin ? "Login to access your mission" : "Register to begin your journey"}
-          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {!isLogin && (
-            <div className="space-y-2">
-              <Label htmlFor="fullName" className="text-foreground">Full Name</Label>
-              <Input
-                id="fullName"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your warrior name"
-                required={!isLogin}
-                className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary backdrop-blur-sm"
-              />
-            </div>
-          )}
+        <Tabs defaultValue="team" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-secondary">
+            <TabsTrigger value="team" className="font-display text-sm tracking-wider data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              TEAM LOGIN
+            </TabsTrigger>
+            <TabsTrigger value="admin" className="font-display text-sm tracking-wider data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              ADMIN LOGIN
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-foreground">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="warrior@kalki.dev"
-              required
-              className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary backdrop-blur-sm"
-            />
-          </div>
+          <TabsContent value="team" className="mt-6">
+            <form onSubmit={handleTeamLogin} className="space-y-5">
+              <div className="text-center mb-4">
+                <h2 className="font-display text-xl font-bold text-foreground">ENTER THE ARENA</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Use your team's unique login key</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="loginKey" className="text-foreground">Team Login Key</Label>
+                <Input
+                  id="loginKey"
+                  value={loginKey}
+                  onChange={(e) => setLoginKey(e.target.value)}
+                  placeholder="Enter your team key"
+                  required
+                  className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary backdrop-blur-sm text-center font-mono text-lg tracking-widest"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full font-display text-lg tracking-wider bg-primary text-primary-foreground hover:bg-kalki-gold-light transition-all duration-300 glow-box-gold"
+              >
+                {loading ? "CONNECTING..." : "LOGIN"}
+              </Button>
+            </form>
+          </TabsContent>
 
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-foreground">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary backdrop-blur-sm"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full font-display text-lg tracking-wider bg-primary text-primary-foreground hover:bg-kalki-gold-light transition-all duration-300 glow-box-gold"
-          >
-            {loading ? "Processing..." : isLogin ? "LOGIN" : "REGISTER"}
-          </Button>
-        </form>
-
-        <div className="text-center">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-kalki-cyan hover:text-kalki-cyan-glow transition-colors font-medium"
-          >
-            {isLogin ? "New warrior? Register here" : "Already registered? Login"}
-          </button>
-        </div>
+          <TabsContent value="admin" className="mt-6">
+            <form onSubmit={handleAdminLogin} className="space-y-5">
+              <div className="text-center mb-4">
+                <h2 className="font-display text-xl font-bold text-foreground">COMMAND CENTER</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Admin access only</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="adminEmail" className="text-foreground">Email</Label>
+                <Input
+                  id="adminEmail"
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="admin@kalki.dev"
+                  required
+                  className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary backdrop-blur-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="adminPassword" className="text-foreground">Password</Label>
+                <Input
+                  id="adminPassword"
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary backdrop-blur-sm"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full font-display text-lg tracking-wider bg-primary text-primary-foreground hover:bg-kalki-gold-light transition-all duration-300 glow-box-gold"
+              >
+                {loading ? "CONNECTING..." : "LOGIN"}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

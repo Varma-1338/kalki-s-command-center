@@ -35,6 +35,41 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance: {
+        Row: {
+          date: string
+          id: string
+          marked_at: string | null
+          marked_by: string | null
+          present: boolean
+          team_member_id: string
+        }
+        Insert: {
+          date?: string
+          id?: string
+          marked_at?: string | null
+          marked_by?: string | null
+          present?: boolean
+          team_member_id: string
+        }
+        Update: {
+          date?: string
+          id?: string
+          marked_at?: string | null
+          marked_by?: string | null
+          present?: boolean
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       problem_statements: {
         Row: {
           created_at: string
@@ -89,18 +124,24 @@ export type Database = {
       team_members: {
         Row: {
           id: string
+          member_email: string
+          member_name: string
           team_id: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           id?: string
+          member_email?: string
+          member_name?: string
           team_id: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           id?: string
+          member_email?: string
+          member_name?: string
           team_id?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -153,18 +194,21 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          login_key: string | null
           name: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           id?: string
+          login_key?: string | null
           name: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
           id?: string
+          login_key?: string | null
           name?: string
         }
         Relationships: []
