@@ -42,16 +42,23 @@ const Auth = () => {
       }
 
       // Set the session in supabase client
-      await supabase.auth.setSession({
+      const { error: sessionError } = await supabase.auth.setSession({
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
       });
 
+      if (sessionError) {
+        toast({ title: "Login failed", description: sessionError.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
       navigate("/dashboard");
     } catch (err: any) {
       toast({ title: "Login failed", description: err.message || "Network error", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
