@@ -27,21 +27,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .maybeSingle();
-    setRole(data?.role ?? "participant");
+    try {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
+      setRole(data?.role ?? "participant");
+    } catch {
+      setRole("participant");
+    }
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          await fetchRole(session.user.id);
+          // Don't await - prevents auth lock deadlock
+          fetchRole(session.user.id);
         } else {
           setRole(null);
         }

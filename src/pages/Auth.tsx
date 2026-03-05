@@ -41,17 +41,25 @@ const Auth = () => {
         return;
       }
 
-      // Set the session in supabase client
-      await supabase.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
+      // Sign in directly using the team credentials
+      const teamEmail = `team-${loginKey.trim().toLowerCase()}@devfest.local`;
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: teamEmail,
+        password: loginKey.trim(),
       });
+
+      if (signInError) {
+        toast({ title: "Login failed", description: signInError.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
 
       navigate("/dashboard");
     } catch (err: any) {
       toast({ title: "Login failed", description: err.message || "Network error", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
