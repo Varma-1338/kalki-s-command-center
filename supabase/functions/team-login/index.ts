@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     const teamPassword = team.login_key;
 
     // Try to sign in first
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!);
+    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
     const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({
       email: teamEmail,
       password: teamPassword,
