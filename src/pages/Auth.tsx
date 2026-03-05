@@ -41,14 +41,15 @@ const Auth = () => {
         return;
       }
 
-      // Set the session in supabase client
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
+      // Sign in directly using the team credentials
+      const teamEmail = `team-${loginKey.trim().toLowerCase()}@devfest.local`;
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: teamEmail,
+        password: loginKey.trim(),
       });
 
-      if (sessionError) {
-        toast({ title: "Login failed", description: sessionError.message, variant: "destructive" });
+      if (signInError) {
+        toast({ title: "Login failed", description: signInError.message, variant: "destructive" });
         setLoading(false);
         return;
       }
